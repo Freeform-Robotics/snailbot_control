@@ -106,7 +106,7 @@ void temp_task(void) {
     mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_GEN_A, temp_pid.out);
 }
 
-void gyro_callback(void) {
+void gyro_callback() {
     bmi.readSensor();
     Serial.println(bmi.getGyroX_rads());
     Serial.println(bmi.getGyroY_rads());
@@ -118,7 +118,7 @@ void gyro_callback(void) {
     toRK3588Serial.write((uint8_t*)&gyro_data, sizeof(gyro_data));
 }
 
-void accel_callback(void) {
+void accel_callback() {
     bmi.readSensor();
     Serial.println(bmi.getAccelX_mss());
     Serial.println(bmi.getAccelY_mss());

@@ -109,17 +109,19 @@ void DifferentialDriver::loop(void)
 {
   unsigned long dt_us = (unsigned long) (micros() - timer);
   double dt = (double)(dt_us) / 1000000.; // Calculate delta time
-  motor_l_real_speed = -((double) (encoder_l->getCount() - encoder_l_last_count)) * MOTOR_RATIO_RAD / dt;
-  motor_r_real_speed = -((double) (encoder_r->getCount() - encoder_r_last_count)) * MOTOR_RATIO_RAD / dt;
-  // Serial.println("loop");
-  // Serial.print(">motor_l_real_speed:");
-  // Serial.println(motor_l_real_speed);
-  // Serial.print(">motor_l_target_speed:");
-  // Serial.println(motor_l_target_speed);
-  // Serial.print(">motor_r_real_speed:");
-  // Serial.println(motor_r_real_speed);
-  // Serial.print(">motor_r_target_speed:");
-  // Serial.println(motor_r_target_speed);
+  
+  // motor_l_real_speed = -((double) (encoder_l->getCount() - encoder_l_last_count)) * MOTOR_RATIO_RAD / dt;
+  // motor_r_real_speed = -((double) (encoder_r->getCount() - encoder_r_last_count)) * MOTOR_RATIO_RAD / dt;
+  Serial.println("loop");
+  Serial.print(">motor_l_real_speed:");
+  Serial.println(motor_l_real_speed);
+  Serial.print(">motor_l_target_speed:");
+  Serial.println(motor_l_target_speed);
+  Serial.print(">motor_r_real_speed:");
+  Serial.println(motor_r_real_speed);
+  Serial.print(">motor_r_target_speed:");
+  Serial.println(motor_r_target_speed);
+  
   velocity_l_pid.Compute();
   velocity_r_pid.Compute();
   // Serial.print(">motor_l_pwm:");
@@ -138,14 +140,16 @@ void DifferentialDriver::loop(void)
 
   if (motor_l_inverted) motor_l->speed(-motor_l_pwm);
   else motor_l->speed(motor_l_pwm);
+  // else motor_l->speed(10.0);
   if (motor_r_inverted) motor_r->speed(-motor_r_pwm);
   else motor_r->speed(motor_r_pwm);
+  // else motor_r->speed(10.0);
   motor_l->loop();
   motor_r->loop();
   
   timer = micros();
-  encoder_l_last_count = encoder_l->getCount();
-  encoder_r_last_count = encoder_r->getCount();
+  // encoder_l_last_count = encoder_l->getCount();
+  // encoder_r_last_count = encoder_r->getCount();
   
   //Serial.print(motor_l_real_speed, 4);Serial.print(' ');Serial.print(motor_l_pwm, 4);Serial.print(' ');Serial.print(motor_l_target_speed, 4);
   //Serial.print(' ');Serial.print(' ');Serial.print(' ');

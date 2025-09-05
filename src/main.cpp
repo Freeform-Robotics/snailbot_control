@@ -22,8 +22,6 @@ typedef struct {
 } control_data_t;
 
 control_data_t control_data;
-double vel_x = 0.0;
-double vel_rot = 0.0;
 
 DC_Motor motor_A(MCPWM_UNIT_1, MCPWM_TIMER_2, AIN1, AIN2);
 DC_Motor motor_B(MCPWM_UNIT_0, MCPWM_TIMER_2, BIN1, BIN2);
@@ -40,11 +38,13 @@ void setup() {
   // RK3588 Serial
   toRK3588Serial.begin(115200, SERIAL_8N1, RK3588_RX, RK3588_TX);
   while(!toRK3588Serial);
-  toRK3588Serial.onReceive(control_callback);
+  // toRK3588Serial.onReceive(control_callback);
+  Serial.onReceive(control_callback);
   Serial.println("RK3588 serial started");
+  toRK3588Serial.println("RK3588 serial started");
 
   // Initialize IMU
-  imu_init();
+  // imu_init();
 
   // Initialize Main Timer
   // timer = timerBegin(0, 80, true);
@@ -54,12 +54,21 @@ void setup() {
 
   // Initialize Base Driver
   base_driver.initialize();
-  base_driver.set_speed_pid(1.0, 0.0, 0.0);
+  base_driver.set_speed_pid(2.0, 0.0, 0.0);
   base_driver.enable_velocity_control();
+
+  // Initialize Serial Packet
+  control_data.vel_x = 1.0;
+  control_data.vel_rot = 0.0;
+
+  Serial.println("Setup completed");
 }
 
 void loop() {
-
+  Serial.println("vel_x: " + String(control_data.vel_x) + ", vel_rot: " + String(control_data.vel_rot));
+  base_driver.speed_rotation_first(control_data.vel_x, control_data.vel_rot);
+  base_driver.loop();
+  delay(1);
 }
 
 // void IRAM_ATTR task(void) {
