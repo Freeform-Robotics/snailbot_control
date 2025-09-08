@@ -50,7 +50,7 @@ void setup() {
   // RK3588 Serial
   toRK3588Serial.begin(115200, SERIAL_8N1, RK3588_RX, RK3588_TX);
   while(!toRK3588Serial);
-  // toRK3588Serial.onReceive(control_callback);
+  toRK3588Serial.onReceive(control_callback);
   // Serial.onReceive(control_callback);
   Serial.println("RK3588 serial started");
   toRK3588Serial.println("RK3588 serial started");
@@ -75,7 +75,7 @@ void setup() {
 
 void loop() {
   while(1) {
-    Serial.println("vel_x: " + String(control_data.vel_x) + ", vel_rot: " + String(control_data.vel_rot));
+    // Serial.println("vel_x: " + String(control_data.vel_x) + ", vel_rot: " + String(control_data.vel_rot));
     base_driver.loop();
     delay(1);
   }
@@ -115,7 +115,7 @@ void control_callback(void) {
     if (abs(y) < 0.1) y = 0.0;
     // Map to velocity
     double vel_x = y * 1.0;      // Max speed 1.0 m/s
-    double vel_rot = -x * 1.0;   // Max rotation speed 1.0 rad/s
+    double vel_rot = x * 1.0;   // Max rotation speed 1.0 rad/s
     base_driver.speed_rotation_first(vel_x, vel_rot);
     Serial.println("RC Control: " + String(vel_x) + ", " + String(vel_rot));
   }

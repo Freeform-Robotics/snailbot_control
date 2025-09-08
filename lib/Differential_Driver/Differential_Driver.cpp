@@ -112,15 +112,15 @@ void DifferentialDriver::loop(void)
   
   // motor_l_real_speed = -((double) (encoder_l->getCount() - encoder_l_last_count)) * MOTOR_RATIO_RAD / dt;
   // motor_r_real_speed = -((double) (encoder_r->getCount() - encoder_r_last_count)) * MOTOR_RATIO_RAD / dt;
-  Serial.println("loop");
-  Serial.print(">motor_l_real_speed:");
-  Serial.println(motor_l_real_speed);
-  Serial.print(">motor_l_target_speed:");
-  Serial.println(motor_l_target_speed);
-  Serial.print(">motor_r_real_speed:");
-  Serial.println(motor_r_real_speed);
-  Serial.print(">motor_r_target_speed:");
-  Serial.println(motor_r_target_speed);
+  // Serial.println("loop");
+  // Serial.print(">motor_l_real_speed:");
+  // Serial.println(motor_l_real_speed);
+  // Serial.print(">motor_l_target_speed:");
+  // Serial.println(motor_l_target_speed);
+  // Serial.print(">motor_r_real_speed:");
+  // Serial.println(motor_r_real_speed);
+  // Serial.print(">motor_r_target_speed:");
+  // Serial.println(motor_r_target_speed);
   
   velocity_l_pid.Compute();
   velocity_r_pid.Compute();
