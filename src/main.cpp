@@ -5,11 +5,11 @@
 #include "crc.h"
 #include "DC_Motor.h"
 #include "Differential_Driver.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/task.h"
 
-hw_timer_t *timer = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+// hw_timer_t *timer = NULL;
+// portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 // void IRAM_ATTR task(void);
 void control_callback(void);
@@ -26,6 +26,15 @@ typedef struct {
 
 control_data_t control_data;
 
+typedef struct {
+  uint8_t header;
+  uint8_t x;
+  uint8_t y;
+  uint8_t tail;
+} rc_data_t;
+
+rc_data_t rc_data;
+
 DC_Motor motor_A(MCPWM_UNIT_1, MCPWM_TIMER_2, AIN1, AIN2);
 DC_Motor motor_B(MCPWM_UNIT_0, MCPWM_TIMER_2, BIN1, BIN2);
 ESP32Encoder encoder_A;
@@ -41,7 +50,7 @@ void setup() {
   // RK3588 Serial
   toRK3588Serial.begin(115200, SERIAL_8N1, RK3588_RX, RK3588_TX);
   while(!toRK3588Serial);
-  toRK3588Serial.onReceive(control_callback);
+  // toRK3588Serial.onReceive(control_callback);
   // Serial.onReceive(control_callback);
   Serial.println("RK3588 serial started");
   toRK3588Serial.println("RK3588 serial started");
@@ -59,37 +68,58 @@ void setup() {
   control_data.vel_rot = 0.0;
 
   // Initialize Control Loop
-  xTaskCreatePinnedToCore(control_loop, "ControlLoop", 4096, NULL, 24, NULL, 0);
+  // xTaskCreatePinnedToCore(control_loop, "ControlLoop", 4096, NULL, 24, NULL, 0);
 
   Serial.println("Setup completed");
 }
 
 void loop() {
-  delay(1000);
-}
-
-void control_loop(void *pvParameters) {
   while(1) {
     Serial.println("vel_x: " + String(control_data.vel_x) + ", vel_rot: " + String(control_data.vel_rot));
     base_driver.loop();
-    vTaskDelay(1);
+    delay(1);
   }
 }
 
+// void control_loop() {
+//   while(1) {
+//     Serial.println("vel_x: " + String(control_data.vel_x) + ", vel_rot: " + String(control_data.vel_rot));
+//     base_driver.loop();
+//     vTaskDelay(1);
+//   }
+// }
+
 void control_callback(void) {
   uint8_t buf[255];
-  for(uint8_t i = 0; toRK3588Serial.available(); i++) {
+  int len = toRK3588Serial.available();
+  if (len > 255) len = 255;
+  for(int i = 0; i < len; i++) {
     buf[i] = toRK3588Serial.read();
   }
-  memcpy(&control_data, buf, sizeof(control_data));
-  if(control_data.header != 0x03) {
-    Serial.printf("Invalid header %d, expect 0x03.\n", control_data.header);
-    return;
+  if (buf[0] == 0x03) {
+    memcpy(&control_data, buf, sizeof(control_data));
+    uint16_t correct_checksum = crc16((uint8_t*)&control_data, sizeof(control_data) - 2);
+    if(control_data.checksum != correct_checksum) {
+      Serial.printf("Invalid checksum %d, expect %d.\n", control_data.checksum, correct_checksum);
+      return;
+    }
+    base_driver.speed_rotation_first(control_data.vel_x, control_data.vel_rot);
   }
-  uint16_t correct_checksum = crc16((uint8_t*)&control_data, sizeof(control_data) - 2);
-  if(control_data.checksum != correct_checksum) {
-    Serial.printf("Invalid checksum %d, expect %d.\n", control_data.checksum, correct_checksum);
-    return;
+  else if (buf[0] == 0xAA && buf[3] == 0xBB) {
+    memcpy(&rc_data, buf, sizeof(rc_data));
+    // Map rc_data.x and rc_data.y from [0, 255] to [-1.0, 1.0]
+    double x = ((double)rc_data.x - 127.5) / 127.5;
+    double y = ((double)rc_data.y - 127.5) / 127.5;
+    // Deadzone
+    if (abs(x) < 0.1) x = 0.0;
+    if (abs(y) < 0.1) y = 0.0;
+    // Map to velocity
+    double vel_x = y * 1.0;      // Max speed 1.0 m/s
+    double vel_rot = -x * 1.0;   // Max rotation speed 1.0 rad/s
+    base_driver.speed_rotation_first(vel_x, vel_rot);
+    Serial.println("RC Control: " + String(vel_x) + ", " + String(vel_rot));
   }
-  base_driver.speed_rotation_first(control_data.vel_x, control_data.vel_rot);
+  else {
+    Serial.println("Invalid header: " + String(buf[0]));
+  }
 }
