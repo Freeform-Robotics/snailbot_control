@@ -5,15 +5,8 @@
 #include "crc.h"
 #include "DC_Motor.h"
 #include "Differential_Driver.h"
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
 
-// hw_timer_t *timer = NULL;
-// portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
-
-// void IRAM_ATTR task(void);
 void control_callback(void);
-void control_loop(void);
 
 HardwareSerial toRK3588Serial(1);
 
@@ -51,12 +44,11 @@ void setup() {
   toRK3588Serial.begin(115200, SERIAL_8N1, RK3588_RX, RK3588_TX);
   while(!toRK3588Serial);
   toRK3588Serial.onReceive(control_callback);
-  // Serial.onReceive(control_callback);
   Serial.println("RK3588 serial started");
   toRK3588Serial.println("RK3588 serial started");
 
   // Initialize IMU
-  // imu_init();
+  imu_init();
 
   // Initialize Base Driver
   base_driver.initialize();
@@ -67,27 +59,15 @@ void setup() {
   control_data.vel_x = 1.0;
   control_data.vel_rot = 0.0;
 
-  // Initialize Control Loop
-  // xTaskCreatePinnedToCore(control_loop, "ControlLoop", 4096, NULL, 24, NULL, 0);
-
   Serial.println("Setup completed");
 }
 
 void loop() {
   while(1) {
-    // Serial.println("vel_x: " + String(control_data.vel_x) + ", vel_rot: " + String(control_data.vel_rot));
     base_driver.loop();
     delay(1);
   }
 }
-
-// void control_loop() {
-//   while(1) {
-//     Serial.println("vel_x: " + String(control_data.vel_x) + ", vel_rot: " + String(control_data.vel_rot));
-//     base_driver.loop();
-//     vTaskDelay(1);
-//   }
-// }
 
 void control_callback(void) {
   uint8_t buf[255];
