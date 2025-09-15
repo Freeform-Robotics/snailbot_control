@@ -58,6 +58,9 @@ class DifferentialDriver
     void set_orientation_pid(double, double, double);
     void set_position_pid(double, double, double);
 
+    double get_delta_x(void);
+    double get_delta_rot(void);
+
     void initialize(void);
     uint8_t inspect(void);
 

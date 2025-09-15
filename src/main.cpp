@@ -1,32 +1,30 @@
 #include <Arduino.h>
-#include <stdint.h>
+#include "main.h"
 #include "gpio_config.h"
 #include "imu.h"
 #include "crc.h"
 #include "DC_Motor.h"
 #include "Differential_Driver.h"
 
+#include "localization.h"
+
 void control_callback(void);
 
 HardwareSerial toRK3588Serial(1);
 
-typedef struct {
-  uint8_t header;
-  double vel_x;
-  double vel_rot;
-  uint16_t checksum;
-} control_data_t;
+hw_timer_t *timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+volatile bool timerFlag = false;
+
+void IRAM_ATTR onTimer() {
+  portENTER_CRITICAL_ISR(&timerMux);
+  timerFlag = true;
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
 
 control_data_t control_data;
-
-typedef struct {
-  uint8_t header;
-  uint8_t x;
-  uint8_t y;
-  uint8_t tail;
-} rc_data_t;
-
 rc_data_t rc_data;
+wheel_delta_odom_t wheel_delta_odom;
 
 DC_Motor motor_A(MCPWM_UNIT_1, MCPWM_TIMER_2, AIN1, AIN2);
 DC_Motor motor_B(MCPWM_UNIT_0, MCPWM_TIMER_2, BIN1, BIN2);
@@ -37,18 +35,20 @@ DifferentialDriver base_driver(&motor_A, &encoder_A, &motor_B, &encoder_B, 0);
 void setup() {
   // Debug Serial
   Serial.begin(115200);
-  while(!Serial);
+  while(!Serial)
+    delay(100);
   Serial.println("Debug serial started");
 
   // RK3588 Serial
   toRK3588Serial.begin(115200, SERIAL_8N1, RK3588_RX, RK3588_TX);
-  while(!toRK3588Serial);
+  while(!toRK3588Serial)
+    delay(100);
   toRK3588Serial.onReceive(control_callback);
   Serial.println("RK3588 serial started");
   toRK3588Serial.println("RK3588 serial started");
 
   // Initialize IMU
-  imu_init();
+  // imu_init();
 
   // Initialize Base Driver
   base_driver.initialize();
@@ -56,16 +56,38 @@ void setup() {
   base_driver.enable_velocity_control();
 
   // Initialize Serial Packet
-  control_data.vel_x = 1.0;
+  control_data.vel_x = 0.0;
   control_data.vel_rot = 0.0;
+  wheel_delta_odom.header = 0x04;
+
+  // Initialize Timer
+  timer = timerBegin(0, 80, true);
+  timerAttachInterrupt(timer, &onTimer, true);
+  timerAlarmWrite(timer, SYSTICK, true);
+  timerAlarmEnable(timer);
+
+  // Initialize Tasks
+  localization_init();
 
   Serial.println("Setup completed");
 }
 
+void send_odom() {
+  wheel_delta_odom.x = base_driver.get_delta_x();
+  wheel_delta_odom.rot = base_driver.get_delta_rot();
+  wheel_delta_odom.checksum = crc16((uint8_t*)&wheel_delta_odom, sizeof(wheel_delta_odom) - sizeof(wheel_delta_odom.checksum));
+  toRK3588Serial.write((uint8_t*)&wheel_delta_odom, sizeof(wheel_delta_odom));
+}
+
 void loop() {
-  while(1) {
+  if (timerFlag) {
+    portENTER_CRITICAL(&timerMux);
+    timerFlag = false;
+    portEXIT_CRITICAL(&timerMux);
+
     base_driver.loop();
-    delay(1);
+    send_odom();
+    localization_task();
   }
 }
 
@@ -78,11 +100,12 @@ void control_callback(void) {
   }
   if (buf[0] == 0x03) {
     memcpy(&control_data, buf, sizeof(control_data));
-    uint16_t correct_checksum = crc16((uint8_t*)&control_data, sizeof(control_data) - 2);
+    uint16_t correct_checksum = crc16((uint8_t*)&control_data, sizeof(control_data) - sizeof(control_data.checksum));
     if(control_data.checksum != correct_checksum) {
       Serial.printf("Invalid checksum %d, expect %d.\n", control_data.checksum, correct_checksum);
       return;
     }
+    Serial.println("Serial Control: " + String(control_data.vel_x) + ", " + String(control_data.vel_rot));
     base_driver.speed_rotation_first(control_data.vel_x, control_data.vel_rot);
   }
   else if (buf[0] == 0xAA && buf[3] == 0xBB) {

@@ -198,6 +198,20 @@ void DifferentialDriver::set_position_pid(double Kp, double Ki, double Kd)
   position_pid.SetTunings(Kp, Ki, Kd);
 }
 
+double DifferentialDriver::get_delta_x(void)
+{
+  double left_distance = encoder_l->getCount() / (double)GEAR_RATIO * 2 * PI * WHEEL_RADIUS;
+  double right_distance = encoder_r->getCount() / (double)GEAR_RATIO * 2 * PI * WHEEL_RADIUS;
+  return (left_distance + right_distance) / 2.;
+}
+
+double DifferentialDriver::get_delta_rot(void)
+{
+  double left_distance = encoder_l->getCount() / (double)GEAR_RATIO * 2 * PI * WHEEL_RADIUS;
+  double right_distance = encoder_r->getCount() / (double)GEAR_RATIO * 2 * PI * WHEEL_RADIUS;
+  return (right_distance - left_distance) / WHEEL_DISTANCE;
+}
+
 void DifferentialDriver::initialize(void)
 {
   uint8_t motor_inspect_code = EEPROM.readByte(eeprom_offset);

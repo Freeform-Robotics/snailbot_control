@@ -5,17 +5,17 @@
 
 typedef struct {
     uint8_t header;     // 0x01
-    float accel_x;
-    float accel_y;
-    float accel_z;
+    float x;
+    float y;
+    float z;
     uint16_t checksum;
 } accel_data_t;
 
 typedef struct {
     uint8_t header;     // 0x02
-    float gyro_x;
-    float gyro_y;
-    float gyro_z;
+    float x;
+    float y;
+    float z;
     uint16_t checksum;
 } gyro_data_t;
 

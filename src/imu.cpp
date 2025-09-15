@@ -27,8 +27,8 @@ void heater_init() {    // Active high heater pwm
 
     mcpwm_config_t pwm_config;
     pwm_config.frequency = 14400;   // PWM frequency = 14.4kHz
-    pwm_config.cmpr_a = 0.0;        // Duty cycle of PWMxA = 0.0%
-    pwm_config.cmpr_b = 0.0;        // Duty cycle of PWMxB = 0.0%
+    pwm_config.cmpr_a = 100.0;        // Duty cycle of PWMxA = 0.0%
+    pwm_config.cmpr_b = 100.0;        // Duty cycle of PWMxB = 0.0%
     pwm_config.counter_mode = MCPWM_UP_COUNTER;
     pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
 
@@ -111,9 +111,9 @@ void gyro_callback() {
     Serial.println(bmi.getGyroX_rads());
     Serial.println(bmi.getGyroY_rads());
     Serial.println(bmi.getGyroZ_rads());
-    gyro_data.gyro_x = bmi.getGyroX_rads();
-    gyro_data.gyro_y = bmi.getGyroY_rads();
-    gyro_data.gyro_z = bmi.getGyroZ_rads();
+    gyro_data.x = bmi.getGyroX_rads();
+    gyro_data.y = bmi.getGyroY_rads();
+    gyro_data.z = bmi.getGyroZ_rads();
     gyro_data.checksum = crc16((uint8_t*)&gyro_data, sizeof(gyro_data) - 2);
     toRK3588Serial.write((uint8_t*)&gyro_data, sizeof(gyro_data));
 }
@@ -123,9 +123,9 @@ void accel_callback() {
     Serial.println(bmi.getAccelX_mss());
     Serial.println(bmi.getAccelY_mss());
     Serial.println(bmi.getAccelZ_mss());
-    accel_data.accel_x = bmi.getAccelX_mss();
-    accel_data.accel_y = bmi.getAccelY_mss();
-    accel_data.accel_z = bmi.getAccelZ_mss();
+    accel_data.x = bmi.getAccelX_mss();
+    accel_data.y = bmi.getAccelY_mss();
+    accel_data.z = bmi.getAccelZ_mss();
     accel_data.checksum = crc16((uint8_t*)&accel_data, sizeof(accel_data) - 2);
     toRK3588Serial.write((uint8_t*)&accel_data, sizeof(accel_data));
 }
