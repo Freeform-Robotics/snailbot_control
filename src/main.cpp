@@ -86,7 +86,7 @@ void loop() {
     portEXIT_CRITICAL(&timerMux);
 
     base_driver.loop();
-    send_odom();
+    // send_odom();
     localization_task();
   }
 }
