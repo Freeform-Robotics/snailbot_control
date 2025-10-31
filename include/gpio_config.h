@@ -15,14 +15,14 @@
 #define BWE2 5
 
 // BMI088 via SPI
-#define INT_GYRO 13
-#define INT_ACCEL 14
-#define CS_ACCEL 26
-#define CS_GYRO 29
-#define IMU_CLK 30
-#define IMU_MOSI 31
-#define IMU_MISO 32
-#define HEATER_PWM 12
+#define INT_GYRO 2
+#define INT_ACCEL 1
+#define CS_ACCEL 9
+#define CS_GYRO 10
+#define IMU_CLK 12
+#define IMU_MOSI 11
+#define IMU_MISO 13
+#define HEATER_PWM 14
 
 // UART to RK3588
 #define RK3588_RX 19

@@ -1,25 +1,33 @@
 #include <Arduino.h>
 #include "main.h"
 #include "gpio_config.h"
-#include "imu.h"
 #include "crc.h"
 #include "DC_Motor.h"
 #include "Differential_Driver.h"
-
-#include "localization.h"
+#include "BMI088driver.h"
+#include "serial.h"
+#include "imu.h"
 
 void control_callback(void);
 
 HardwareSerial toRK3588Serial(1);
 
-hw_timer_t *timer = NULL;
+hw_timer_t *timer = NULL, *timer_slow = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+portMUX_TYPE timerSlowMux = portMUX_INITIALIZER_UNLOCKED;
 volatile bool timerFlag = false;
+volatile bool timerSlowFlag = false;
 
 void IRAM_ATTR onTimer() {
   portENTER_CRITICAL_ISR(&timerMux);
   timerFlag = true;
   portEXIT_CRITICAL_ISR(&timerMux);
+}
+
+void IRAM_ATTR onTimerSlow() {
+  portENTER_CRITICAL_ISR(&timerSlowMux);
+  timerSlowFlag = true;
+  portEXIT_CRITICAL_ISR(&timerSlowMux);
 }
 
 control_data_t control_data;
@@ -40,15 +48,14 @@ void setup() {
   Serial.println("Debug serial started");
 
   // RK3588 Serial
-  toRK3588Serial.begin(115200, SERIAL_8N1, RK3588_RX, RK3588_TX);
+  toRK3588Serial.begin(230400, SERIAL_8N1, RK3588_RX, RK3588_TX);
   while(!toRK3588Serial)
     delay(100);
   toRK3588Serial.onReceive(control_callback);
   Serial.println("RK3588 serial started");
-  toRK3588Serial.println("RK3588 serial started");
 
   // Initialize IMU
-  // imu_init();
+  imu_init();
 
   // Initialize Base Driver
   base_driver.initialize();
@@ -60,14 +67,17 @@ void setup() {
   control_data.vel_rot = 0.0;
   wheel_delta_odom.header = 0x04;
 
-  // Initialize Timer
-  timer = timerBegin(0, 80, true);
+  // Initialize Timer 125Hz
+  timer = timerBegin(0, 640, true);
   timerAttachInterrupt(timer, &onTimer, true);
   timerAlarmWrite(timer, SYSTICK, true);
   timerAlarmEnable(timer);
 
-  // Initialize Tasks
-  localization_init();
+  // Initialize Timer 0.5Hz
+  timer_slow = timerBegin(1, 40000, true);
+  timerAttachInterrupt(timer_slow, &onTimerSlow, true);
+  timerAlarmWrite(timer_slow, 4000, true);
+  timerAlarmEnable(timer_slow);
 
   Serial.println("Setup completed");
 }
@@ -79,16 +89,34 @@ void send_odom() {
   toRK3588Serial.write((uint8_t*)&wheel_delta_odom, sizeof(wheel_delta_odom));
 }
 
-void loop() {
+void on_timer_125hz_task() {
   if (timerFlag) {
     portENTER_CRITICAL(&timerMux);
     timerFlag = false;
     portEXIT_CRITICAL(&timerMux);
-
-    base_driver.loop();
+    
     // send_odom();
-    localization_task();
+    // imu_filter_task();
   }
+}
+
+void on_timer_0_5hz_task() {
+  if (timerSlowFlag) {
+    portENTER_CRITICAL(&timerSlowMux);
+    timerSlowFlag = false;
+    portEXIT_CRITICAL(&timerSlowMux);
+    
+    temp_task();
+  }
+}
+
+void loop() {
+  on_timer_125hz_task();
+  on_timer_0_5hz_task();
+  accel_callback();
+  gyro_callback();
+  serial_send_task();
+  base_driver.loop();
 }
 
 void control_callback(void) {
