@@ -48,7 +48,7 @@ void setup() {
   Serial.println("Debug serial started");
 
   // RK3588 Serial
-  toRK3588Serial.begin(230400, SERIAL_8N1, RK3588_RX, RK3588_TX);
+  toRK3588Serial.begin(576000, SERIAL_8N1, RK3588_RX, RK3588_TX);
   while(!toRK3588Serial)
     delay(100);
   toRK3588Serial.onReceive(control_callback);

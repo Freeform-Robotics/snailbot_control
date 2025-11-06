@@ -201,6 +201,10 @@ void accel_callback() {
     imu_data.accel.accel_no_g[1] = raw_accel[1] - gravity[1];
     imu_data.accel.accel_no_g[2] = raw_accel[2] - gravity[2];
 
+    imu_data.accel.accel_raw[0] = raw_accel[0];
+    imu_data.accel.accel_raw[1] = raw_accel[1];
+    imu_data.accel.accel_raw[2] = raw_accel[2];
+
     imu_data.accel.vel[0] += imu_data.accel.accel_no_g[0] * dt;
     imu_data.accel.vel[1] += imu_data.accel.accel_no_g[1] * dt;
     imu_data.accel.vel[2] += imu_data.accel.accel_no_g[2] * dt;
