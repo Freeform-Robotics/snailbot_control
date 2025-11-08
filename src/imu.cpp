@@ -188,7 +188,6 @@ void accel_callback() {
     get_BMI088_accel(raw_accel);
     uint64_t now = esp_timer_get_time();
     float dt = (now - accel_timestamp) / 1000000.0f;
-    imu_data.accel.dt = dt;
     accel_timestamp = now;
     accel_data_updated = true;
 
@@ -218,6 +217,11 @@ void accel_callback() {
     );
     std::vector<uint8_t> headers = {0x55, 0xAA, 0x55, 0xAA};
     send_buf.insert(send_buf.begin(), headers.begin(), headers.end());
+
+    uint16_t crc = crc16(send_buf.data() + 4, static_cast<uint16_t>(sizeof(imu_data.accel)));
+    send_buf.push_back(static_cast<uint8_t>(crc & 0xFF));
+    send_buf.push_back(static_cast<uint8_t>((crc >> 8) & 0xFF));
+
     send(send_buf);
 }
 
@@ -228,7 +232,6 @@ void gyro_callback() {
     get_BMI088_gyro(imu_data.gyro.data);
     uint64_t now = esp_timer_get_time();
     float dt = (now - gyro_timestamp) / 1000000.0f;
-    imu_data.gyro.dt = dt;
     gyro_timestamp = now;
     gyro_data_updated = true;
 
@@ -241,6 +244,11 @@ void gyro_callback() {
     );
     std::vector<uint8_t> headers = {0xAA, 0x55, 0xAA, 0x55};
     send_buf.insert(send_buf.begin(), headers.begin(), headers.end());
+
+    uint16_t crc = crc16(send_buf.data() + 4, static_cast<uint16_t>(sizeof(imu_data.gyro)));
+    send_buf.push_back(static_cast<uint8_t>(crc & 0xFF));
+    send_buf.push_back(static_cast<uint8_t>((crc >> 8) & 0xFF));    
+    
     send(send_buf);
 }
 

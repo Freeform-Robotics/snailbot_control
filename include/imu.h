@@ -8,13 +8,11 @@ typedef struct {
     float accel_raw[3];
     float vel[3];
     float pos[3];
-    float dt;
 } accel_data_t;
 
 typedef struct {
     float data[3];
     float rad_filtered[3];
-    float dt;
 } gyro_data_t;
 
 typedef struct {
