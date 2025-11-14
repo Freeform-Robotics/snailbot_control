@@ -10,7 +10,7 @@ typedef struct {
   double vel_x;
   double vel_rot;
   uint16_t checksum;
-} control_data_t;
+} __attribute__((packed)) control_data_t;
 
 typedef struct {
   uint8_t header; // 0xAA

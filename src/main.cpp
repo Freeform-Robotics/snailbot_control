@@ -8,7 +8,8 @@
 #include "serial.h"
 #include "imu.h"
 
-void control_callback(void);
+void uart_callback(void);
+void uart_task(void);
 
 HardwareSerial toRK3588Serial(1);
 
@@ -17,6 +18,9 @@ portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE timerSlowMux = portMUX_INITIALIZER_UNLOCKED;
 volatile bool timerFlag = false;
 volatile bool timerSlowFlag = false;
+
+portMUX_TYPE uartMux = portMUX_INITIALIZER_UNLOCKED;
+bool toRK3588Serial_available = false;
 
 void IRAM_ATTR onTimer() {
   portENTER_CRITICAL_ISR(&timerMux);
@@ -51,7 +55,7 @@ void setup() {
   toRK3588Serial.begin(576000, SERIAL_8N1, RK3588_RX, RK3588_TX);
   while(!toRK3588Serial)
     delay(100);
-  toRK3588Serial.onReceive(control_callback);
+  toRK3588Serial.onReceive(uart_callback);
   Serial.println("RK3588 serial started");
 
   // Initialize IMU
@@ -116,10 +120,25 @@ void loop() {
   accel_callback();
   gyro_callback();
   serial_send_task();
+  uart_task();
   base_driver.loop();
 }
 
-void control_callback(void) {
+void uart_callback(void) {
+  portENTER_CRITICAL(&uartMux);
+  toRK3588Serial_available = true;
+  portEXIT_CRITICAL(&uartMux);
+}
+
+void uart_task(void) {
+  portENTER_CRITICAL(&uartMux);
+  if (!toRK3588Serial_available) {
+    portEXIT_CRITICAL(&uartMux);
+    return;
+  }
+  toRK3588Serial_available = false;
+  portEXIT_CRITICAL(&uartMux);
+
   uint8_t buf[255];
   int len = toRK3588Serial.available();
   if (len > 255) len = 255;
