@@ -10,7 +10,7 @@
 
 void uart_callback(void);
 void uart_task(void);
-
+void motor_test(void);
 HardwareSerial toRK3588Serial(1);
 
 hw_timer_t *timer = NULL, *timer_slow = NULL;
@@ -121,6 +121,7 @@ void loop() {
   gyro_callback();
   serial_send_task();
   uart_task();
+  // motor_test();
   base_driver.loop();
 }
 
@@ -172,4 +173,17 @@ void uart_task(void) {
   else {
     Serial.println("Invalid header: " + String(buf[0]));
   }
+}
+
+void motor_test(void) {
+    static unsigned long last_print_time = 0;
+    
+    if (millis() - last_print_time > 1000) {
+        Serial.println("Enter motor test");
+        last_print_time = millis();
+    }
+
+    double vel_x = 0.2;     
+    double vel_rot = 0.0; 
+    base_driver.speed_rotation_first(vel_x, vel_rot);
 }

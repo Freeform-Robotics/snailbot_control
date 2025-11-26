@@ -204,13 +204,6 @@ void accel_callback() {
     imu_data.accel.accel_raw[1] = raw_accel[1];
     imu_data.accel.accel_raw[2] = raw_accel[2];
 
-    imu_data.accel.vel[0] += imu_data.accel.accel_no_g[0] * dt;
-    imu_data.accel.vel[1] += imu_data.accel.accel_no_g[1] * dt;
-    imu_data.accel.vel[2] += imu_data.accel.accel_no_g[2] * dt;
-    imu_data.accel.pos[0] += imu_data.accel.vel[0] * dt;
-    imu_data.accel.pos[1] += imu_data.accel.vel[1] * dt;
-    imu_data.accel.pos[2] += imu_data.accel.vel[2] * dt;
-
     std::vector<uint8_t> send_buf(
         (uint8_t*)&imu_data.accel,
         (uint8_t*)&imu_data.accel + sizeof(imu_data.accel)

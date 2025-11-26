@@ -6,8 +6,6 @@
 typedef struct {
     float accel_no_g[3];
     float accel_raw[3];
-    float vel[3];
-    float pos[3];
 } accel_data_t;
 
 typedef struct {
