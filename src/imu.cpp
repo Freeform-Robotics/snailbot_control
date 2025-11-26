@@ -191,15 +191,6 @@ void accel_callback() {
     accel_timestamp = now;
     accel_data_updated = true;
 
-    float gravity[3];
-    float roll = imu_data.gyro.rad_filtered[0];
-    float pitch = imu_data.gyro.rad_filtered[1];
-    float yaw = imu_data.gyro.rad_filtered[2];
-    rotate_vector_rpy(gravity_init, roll, pitch, yaw, gravity);
-    imu_data.accel.accel_no_g[0] = raw_accel[0] - gravity[0];
-    imu_data.accel.accel_no_g[1] = raw_accel[1] - gravity[1];
-    imu_data.accel.accel_no_g[2] = raw_accel[2] - gravity[2];
-
     imu_data.accel.accel_raw[0] = raw_accel[0];
     imu_data.accel.accel_raw[1] = raw_accel[1];
     imu_data.accel.accel_raw[2] = raw_accel[2];
@@ -228,9 +219,6 @@ void gyro_callback() {
     gyro_timestamp = now;
     gyro_data_updated = true;
 
-    integrate_gyro_quaternion(imu_data.gyro.data[0], imu_data.gyro.data[1], imu_data.gyro.data[2], dt);
-    quaternion_to_euler(imu_data.gyro.rad_filtered[0], imu_data.gyro.rad_filtered[1], imu_data.gyro.rad_filtered[2]);
-
     std::vector<uint8_t> send_buf(
         (uint8_t*)&imu_data.gyro,
         (uint8_t*)&imu_data.gyro + sizeof(imu_data.gyro)
@@ -254,8 +242,4 @@ void imu_filter_task(void) {
     gyro_data_updated = false;
     madgwick_filter.updateIMU(imu_data.gyro.data[0], imu_data.gyro.data[1], imu_data.gyro.data[2],
                               raw_accel[0], raw_accel[1], raw_accel[2]);
-
-    imu_data.gyro.rad_filtered[0] = madgwick_filter.getRollRadians();
-    imu_data.gyro.rad_filtered[1] = madgwick_filter.getPitchRadians();
-    imu_data.gyro.rad_filtered[2] = madgwick_filter.getYawRadians();
 }

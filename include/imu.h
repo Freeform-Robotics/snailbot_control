@@ -4,13 +4,11 @@
 #include <stdint.h>
 
 typedef struct {
-    float accel_no_g[3];
     float accel_raw[3];
 } accel_data_t;
 
 typedef struct {
     float data[3];
-    float rad_filtered[3];
 } gyro_data_t;
 
 typedef struct {
