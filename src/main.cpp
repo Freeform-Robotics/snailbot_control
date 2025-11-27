@@ -55,7 +55,6 @@ void setup() {
   toRK3588Serial.begin(230400, SERIAL_8N1, RK3588_RX, RK3588_TX);
   while(!toRK3588Serial)
     delay(100);
-  toRK3588Serial.onReceive(uart_callback);
   Serial.println("RK3588 serial started");
 
   // Initialize IMU
@@ -132,46 +131,49 @@ void uart_callback(void) {
 }
 
 void uart_task(void) {
-  portENTER_CRITICAL(&uartMux);
-  if (!toRK3588Serial_available) {
-    portEXIT_CRITICAL(&uartMux);
-    return;
-  }
-  toRK3588Serial_available = false;
-  portEXIT_CRITICAL(&uartMux);
+  const size_t PACKET_SIZE_CONTROL = sizeof(control_data_t);
+  const size_t PACKET_SIZE_RC = sizeof(rc_data_t);
 
-  uint8_t buf[255];
-  int len = toRK3588Serial.available();
-  if (len > 255) len = 255;
-  for(int i = 0; i < len; i++) {
-    buf[i] = toRK3588Serial.read();
-  }
-  if (buf[0] == 0x03) {
-    memcpy(&control_data, buf, sizeof(control_data));
-    uint16_t correct_checksum = crc16((uint8_t*)&control_data, sizeof(control_data) - sizeof(control_data.checksum));
-    if(control_data.checksum != correct_checksum) {
-      Serial.printf("Invalid checksum %d, expect %d.\n", control_data.checksum, correct_checksum);
-      return;
+  while (toRK3588Serial.available() > 0) {
+    
+    uint8_t header = toRK3588Serial.peek();
+
+    if (header == 0x03) {
+      if (toRK3588Serial.available() < PACKET_SIZE_CONTROL) return;
+
+      uint8_t buf[PACKET_SIZE_CONTROL];
+      toRK3588Serial.readBytes(buf, PACKET_SIZE_CONTROL);
+
+      control_data_t temp_data;
+      memcpy(&temp_data, buf, sizeof(temp_data));
+      uint16_t correct_checksum = crc16((uint8_t*)&temp_data, sizeof(temp_data) - sizeof(temp_data.checksum));
+
+      if (temp_data.checksum == correct_checksum) {
+        // Serial.println("CMD"); 
+        base_driver.speed_rotation_first(-temp_data.vel_x, temp_data.vel_rot);
+      } else {
+        Serial.println("CRC Error CMD");
+      }
     }
-    Serial.println("Serial Control: " + String(control_data.vel_x) + ", " + String(control_data.vel_rot));
-    base_driver.speed_rotation_first(control_data.vel_x, control_data.vel_rot);
-  }
-  else if (buf[0] == 0xAA && buf[3] == 0xBB) {
-    memcpy(&rc_data, buf, sizeof(rc_data));
-    // Map rc_data.x and rc_data.y from [0, 255] to [-1.0, 1.0]
-    double x = ((double)rc_data.x - 127.5) / 127.5;
-    double y = ((double)rc_data.y - 127.5) / 127.5;
-    // Deadzone
-    if (abs(x) < 0.1) x = 0.0;
-    if (abs(y) < 0.1) y = 0.0;
-    // Map to velocity
-    double vel_x = y * 1.0;      // Max speed 1.0 m/s
-    double vel_rot = x * 1.0;   // Max rotation speed 1.0 rad/s
-    base_driver.speed_rotation_first(vel_x, vel_rot);
-    Serial.println("RC Control: " + String(vel_x) + ", " + String(vel_rot));
-  }
-  else {
-    Serial.println("Invalid header: " + String(buf[0]));
+    
+    else if (header == 0xAA) {
+      if (toRK3588Serial.available() < PACKET_SIZE_RC) return;
+      
+      uint8_t buf[PACKET_SIZE_RC];
+      toRK3588Serial.readBytes(buf, PACKET_SIZE_RC);
+
+      if (buf[3] == 0xBB) {
+         memcpy(&rc_data, buf, sizeof(rc_data));
+         double x = ((double)rc_data.x - 127.5) / 127.5;
+         double y = ((double)rc_data.y - 127.5) / 127.5;
+         if (abs(x) < 0.1) x = 0.0;
+         if (abs(y) < 0.1) y = 0.0;
+         base_driver.speed_rotation_first(y * 1.0, x * 1.0);
+      }
+    }
+    else {
+      toRK3588Serial.read(); 
+    }
   }
 }
 
