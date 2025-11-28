@@ -3,6 +3,7 @@
 
 // Motor Control
 #define MOTOR_NSLEEP 6
+// #define MOTOR_NSLEEP  46
 #define AIN1 17
 #define AIN2 16
 #define BIN1 15
